@@ -4,9 +4,9 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Tetris</title>
-  <link rel="stylesheet" href="style.css" />
+  <link rel="stylesheet" href="style.css?v=3" />
 </head>
-<body>
+<body data-theme="dark">
   <div class="wrapper">
     <h1 class="game-title">TETRIS <span class="game-subtitle">(Adaptación a cargo de Antonio)</span></h1>
     <div class="game-container">
@@ -48,11 +48,27 @@
       <div class="overlay-box">
         <p id="overlay-title">GAME OVER</p>
         <p id="overlay-score"></p>
-        <button id="restart-btn">Reiniciar</button>
+        <div class="overlay-actions">
+          <button id="resume-btn" type="button">Continuar</button>
+          <button id="restart-btn" type="button">Reiniciar</button>
+        </div>
       </div>
     </div>
+
+    <footer class="theme-footer">
+      <button id="theme-toggle" type="button" aria-label="Cambiar a modo claro" title="Cambiar tema" aria-pressed="false">
+        <span class="theme-option theme-option-light" aria-hidden="true">
+          <span class="icon">☀️</span>
+          <span class="theme-label">Cambiar a modo claro</span>
+        </span>
+        <span class="theme-option theme-option-dark" aria-hidden="true">
+          <span class="icon">🌙</span>
+          <span class="theme-label">Cambiar a modo oscuro</span>
+        </span>
+      </button>
+    </footer>
   </div>
 
-  <script src="game.js"></script>
+  <script src="game.js?v=3"></script>
 </body>
 </html>
