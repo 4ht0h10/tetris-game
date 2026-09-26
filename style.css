@@ -193,8 +193,14 @@ kbd {
   color: var(--accent);
 }
 
-#restart-btn {
+.overlay-actions {
+  display: flex;
+  gap: 12px;
   margin-top: 8px;
+}
+
+#resume-btn,
+#restart-btn {
   background: var(--accent);
   color: var(--accent-contrast);
   border: none;
@@ -207,8 +213,13 @@ kbd {
   transition: background 0.15s;
 }
 
+#resume-btn:hover,
 #restart-btn:hover {
   background: var(--accent-hover);
+}
+
+#resume-btn[hidden] {
+  display: none;
 }
 
 /* ---- Toggle de tema ---- */

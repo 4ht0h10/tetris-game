@@ -19,7 +19,7 @@ Verification is manual: reload the page and play.
 
 ## Architecture
 
-- `index.html` — DOM: `<canvas id="board">` (300×600), side panel (`#score`, `#lines`, `#level`, `<canvas id="next-canvas">` 120×120), and a shared `#overlay` used for both PAUSE and GAME OVER (toggled via the `hidden` class). `game.js` looks up these elements by id at load time, so renaming ids requires changing both files.
+- `index.html` — DOM: `<canvas id="board">` (300×600), side panel (`#score`, `#lines`, `#level`, `<canvas id="next-canvas">` 120×120), and a shared `#overlay` used for both PAUSE and GAME OVER (toggled via the `hidden` class), with `#resume-btn` (shown only in PAUSE) and `#restart-btn`. `game.js` looks up these elements by id at load time, so renaming ids requires changing both files. `style.css` and `game.js` are referenced with a `?v=N` cache-busting query; bump it whenever either file changes.
 - `game.js` — all game logic, as top-level functions sharing module-level mutable state (`board`, `current`, `next`, `score`, `lines`, `level`, `paused`, `gameOver`, `dropInterval`, `dropAccum`, `animId`). `init()` resets all of it and is also the restart handler.
 - `style.css` — dark/retro visual theme only.
 

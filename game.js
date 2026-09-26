@@ -42,6 +42,7 @@ const overlay = document.getElementById('overlay');
 const overlayTitle = document.getElementById('overlay-title');
 const overlayScore = document.getElementById('overlay-score');
 const restartBtn = document.getElementById('restart-btn');
+const resumeBtn = document.getElementById('resume-btn');
 const themeToggleBtn = document.getElementById('theme-toggle');
 
 let board, current, next, score, lines, level, paused, gameOver, lastTime, dropAccum, dropInterval, animId, theme;
@@ -148,6 +149,7 @@ function lockPiece() {
 function spawn() {
   current = next;
   next = randomPiece();
+  dropAccum = 0;
   if (collide(current.shape, current.x, current.y)) {
     endGame();
   }
@@ -227,6 +229,7 @@ function endGame() {
   cancelAnimationFrame(animId);
   overlayTitle.textContent = 'GAME OVER';
   overlayScore.textContent = `Puntuación: ${score.toLocaleString()}`;
+  resumeBtn.hidden = true;
   overlay.classList.remove('hidden');
 }
 
@@ -248,12 +251,14 @@ function togglePause() {
   if (gameOver) return;
   paused = !paused;
   if (!paused) {
+    overlay.classList.add('hidden');
     lastTime = performance.now();
     loop(lastTime);
   } else {
     cancelAnimationFrame(animId);
     overlayTitle.textContent = 'PAUSA';
     overlayScore.textContent = '';
+    resumeBtn.hidden = false;
     overlay.classList.remove('hidden');
   }
 }
@@ -271,7 +276,7 @@ function loop(ts) {
     }
   }
   draw();
-  animId = requestAnimationFrame(loop);
+  if (!gameOver) animId = requestAnimationFrame(loop);
 }
 
 function init() {
@@ -318,6 +323,7 @@ document.addEventListener('keydown', e => {
 });
 
 restartBtn.addEventListener('click', init);
+resumeBtn.addEventListener('click', togglePause);
 themeToggleBtn.addEventListener('click', toggleTheme);
 
 const savedTheme = localStorage.getItem(THEME_STORAGE_KEY);
