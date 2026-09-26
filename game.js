@@ -13,6 +13,8 @@ const COLORS = [
   '#e57373', // Z - red
   '#7986cb', // J - indigo
   '#ffb74d', // L - orange
+  '#ec407a', // Single - pink
+  '#8d6e63', // Hollow - brown
 ];
 
 const PIECES = [
@@ -24,7 +26,13 @@ const PIECES = [
   [[5,5,0],[0,5,5],[0,0,0]],                  // Z
   [[6,0,0],[6,6,6],[0,0,0]],                  // J
   [[0,0,7],[7,7,7],[0,0,0]],                  // L
+  [[8]],                                       // Single (reward after a Tetris)
+  [[9,9,9],[9,0,9],[9,9,9]],                  // Hollow (challenge)
 ];
+
+const SINGLE = 8;
+const HOLLOW = 9;
+const HOLLOW_WEIGHT = 0.5; // relative to 1 for each standard piece
 
 const LINE_SCORES = [0, 100, 300, 500, 800];
 
@@ -51,10 +59,18 @@ function createBoard() {
   return Array.from({ length: ROWS }, () => new Array(COLS).fill(0));
 }
 
-function randomPiece() {
-  const type = Math.floor(Math.random() * 7) + 1;
+function makePiece(type) {
   const shape = PIECES[type].map(row => [...row]);
   return { type, shape, x: Math.floor(COLS / 2) - Math.floor(shape[0].length / 2), y: 0 };
+}
+
+function randomPiece() {
+  const r = Math.random() * (7 + HOLLOW_WEIGHT);
+  return makePiece(r >= 7 ? HOLLOW : Math.floor(r) + 1);
+}
+
+function scoreMultiplier(piece) {
+  return piece.type === SINGLE || piece.type === HOLLOW ? 2 : 1;
 }
 
 function collide(shape, ox, oy) {
@@ -98,7 +114,7 @@ function merge() {
         board[current.y + r][current.x + c] = current.shape[r][c];
 }
 
-function clearLines() {
+function clearLines(mult) {
   let cleared = 0;
   for (let r = ROWS - 1; r >= 0; r--) {
     if (board[r].every(v => v !== 0)) {
@@ -110,11 +126,12 @@ function clearLines() {
   }
   if (cleared) {
     lines += cleared;
-    score += (LINE_SCORES[cleared] || 0) * level;
+    score += (LINE_SCORES[cleared] || 0) * level * mult;
     level = Math.floor(lines / 10) + 1;
     dropInterval = Math.max(100, 1000 - (level - 1) * 90);
     updateHUD();
   }
+  return cleared;
 }
 
 function ghostY() {
@@ -125,7 +142,7 @@ function ghostY() {
 
 function hardDrop() {
   const gy = ghostY();
-  score += (gy - current.y) * 2;
+  score += (gy - current.y) * 2 * scoreMultiplier(current);
   current.y = gy;
   lockPiece();
 }
@@ -133,7 +150,7 @@ function hardDrop() {
 function softDrop() {
   if (!collide(current.shape, current.x, current.y + 1)) {
     current.y++;
-    score += 1;
+    score += scoreMultiplier(current);
     updateHUD();
   } else {
     lockPiece();
@@ -142,8 +159,13 @@ function softDrop() {
 
 function lockPiece() {
   merge();
-  clearLines();
+  const cleared = clearLines(scoreMultiplier(current));
   spawn();
+  if (cleared === 4 && !gameOver) {
+    // Tetris reward: the upcoming piece becomes a 1×1
+    next = makePiece(SINGLE);
+    drawNext();
+  }
 }
 
 function spawn() {

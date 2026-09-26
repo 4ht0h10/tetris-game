@@ -25,8 +25,9 @@ Verification is manual: reload the page and play.
 
 Key conventions in `game.js`:
 
-- **Board** is a `ROWS × COLS` matrix; `0` = empty, `1–7` = piece type, which doubles as the index into `COLORS` and `PIECES`. Piece shape matrices store their type number in filled cells, so merging a piece copies color info directly into the board.
+- **Board** is a `ROWS × COLS` matrix; `0` = empty, `1–9` = piece type, which doubles as the index into `COLORS` and `PIECES`. Piece shape matrices store their type number in filled cells, so merging a piece copies color info directly into the board.
 - **Pieces** are `{ type, shape, x, y }`; `shape` is a square matrix copied from `PIECES` (never mutate `PIECES` itself). Rotation is `rotateCW` (transpose + reverse), with simple horizontal wall kicks `[0, -1, 1, -2, 2]` in `tryRotate`.
+- **Special pieces**: `SINGLE` (8, 1×1) and `HOLLOW` (9, 3×3 ring). `randomPiece()` is weighted: types 1–7 weight 1, `HOLLOW` weight `HOLLOW_WEIGHT` (0.5); `SINGLE` never spawns randomly — `lockPiece()` replaces `next` with it after a 4-line clear. Both score ×2 (line clears and drop points) via `scoreMultiplier(piece)`. Use `makePiece(type)` to build any piece.
 - **`collide(shape, x, y)`** is the single source of truth for movement validity; cells with `y < 0` are allowed (above the board).
 - **Lock pipeline**: `lockPiece()` → `merge()` → `clearLines()` (updates lines/score/level/`dropInterval`) → `spawn()` (promotes `next` to `current`; collision at spawn triggers `endGame()`).
 - **Game loop**: `loop(ts)` via `requestAnimationFrame`, accumulating time in `dropAccum` until `dropInterval`; it redraws the whole board each frame. Pause/game over stop the loop with `cancelAnimationFrame(animId)`.
