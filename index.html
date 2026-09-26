@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Tetris</title>
-  <link rel="stylesheet" href="style.css" />
+  <link rel="stylesheet" href="style.css?v=2" />
 </head>
 <body data-theme="dark">
   <div class="wrapper">
@@ -54,12 +54,18 @@
 
     <footer class="theme-footer">
       <button id="theme-toggle" type="button" aria-label="Cambiar a modo claro" title="Cambiar tema" aria-pressed="false">
-        <span class="icon icon-sun" aria-hidden="true">☀️</span>
-        <span class="icon icon-moon" aria-hidden="true">🌙</span>
+        <span class="theme-option theme-option-light" aria-hidden="true">
+          <span class="icon">☀️</span>
+          <span class="theme-label">Cambiar a modo claro</span>
+        </span>
+        <span class="theme-option theme-option-dark" aria-hidden="true">
+          <span class="icon">🌙</span>
+          <span class="theme-label">Cambiar a modo oscuro</span>
+        </span>
       </button>
     </footer>
   </div>
 
-  <script src="game.js"></script>
+  <script src="game.js?v=2"></script>
 </body>
 </html>

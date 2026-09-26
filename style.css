@@ -213,6 +213,9 @@ kbd {
 
 /* ---- Toggle de tema ---- */
 .theme-footer {
+  /* Por encima de #overlay, que cubre todo .wrapper en PAUSA/GAME OVER */
+  position: relative;
+  z-index: 1;
   display: flex;
   justify-content: center;
   margin-top: 20px;
@@ -222,13 +225,14 @@ kbd {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 40px;
   height: 40px;
+  padding: 0 16px 0 12px;
   background: var(--panel-bg);
   border: 1px solid var(--border);
-  border-radius: 50%;
+  border-radius: 20px;
+  color: var(--fg);
+  font-family: inherit;
   cursor: pointer;
-  font-size: 18px;
   line-height: 1;
   transition: background 0.15s, border-color 0.15s;
 }
@@ -237,16 +241,28 @@ kbd {
   border-color: var(--accent);
 }
 
-#theme-toggle .icon {
+#theme-toggle .theme-option {
   display: none;
+  align-items: center;
+  gap: 8px;
+}
+
+#theme-toggle .icon {
+  font-size: 18px;
+}
+
+#theme-toggle .theme-label {
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
 }
 
 /* Modo oscuro activo: mostrar sol (acción = pasar a claro) */
-[data-theme="dark"] #theme-toggle .icon-sun {
-  display: block;
+[data-theme="dark"] #theme-toggle .theme-option-light {
+  display: flex;
 }
 
 /* Modo claro activo: mostrar luna (acción = pasar a oscuro) */
-[data-theme="light"] #theme-toggle .icon-moon {
-  display: block;
+[data-theme="light"] #theme-toggle .theme-option-dark {
+  display: flex;
 }
