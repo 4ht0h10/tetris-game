@@ -6,7 +6,7 @@
   <title>Tetris</title>
   <link rel="stylesheet" href="style.css" />
 </head>
-<body>
+<body data-theme="dark">
   <div class="wrapper">
     <h1 class="game-title">TETRIS <span class="game-subtitle">(Adaptación a cargo de Antonio)</span></h1>
     <div class="game-container">
@@ -51,6 +51,13 @@
         <button id="restart-btn">Reiniciar</button>
       </div>
     </div>
+
+    <footer class="theme-footer">
+      <button id="theme-toggle" type="button" aria-label="Cambiar a modo claro" title="Cambiar tema" aria-pressed="false">
+        <span class="icon icon-sun" aria-hidden="true">☀️</span>
+        <span class="icon icon-moon" aria-hidden="true">🌙</span>
+      </button>
+    </footer>
   </div>
 
   <script src="game.js"></script>
