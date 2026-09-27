@@ -15,6 +15,11 @@ const COLORS = [
   '#ffb74d', // L - orange
   '#ec407a', // Single - pink
   '#8d6e63', // Hollow - brown
+  '#424242', // Bomb - dark grey
+  '#fff176', // Ray - light yellow
+  '#f8bbd0', // Tint - light pink
+  '#90a4ae', // Gravity - blue grey
+  '#ffffff', // Wildcard (drawn as a rainbow gradient)
 ];
 
 const PIECES = [
@@ -28,11 +33,27 @@ const PIECES = [
   [[0,0,7],[7,7,7],[0,0,0]],                  // L
   [[8]],                                       // Single (reward after a Tetris)
   [[9,9,9],[9,0,9],[9,9,9]],                  // Hollow (challenge)
+  [[10]],                                      // Bomb (power-up)
+  [[11]],                                      // Ray (power-up)
+  [[12]],                                      // Tint (power-up)
+  [[13]],                                      // Gravity (power-up)
+  null,                                        // Wildcard (board-only cell value)
 ];
 
 const SINGLE = 8;
 const HOLLOW = 9;
 const HOLLOW_WEIGHT = 0.5; // relative to 1 for each standard piece
+
+const BOMB = 10;
+const RAY = 11;
+const TINT = 12;
+const GRAVITY = 13;
+const WILDCARD = 14;
+const POWER_UPS = [BOMB, RAY, TINT, GRAVITY];
+const POWER_ICONS = { [BOMB]: '💣', [RAY]: '⚡', [TINT]: '🎨', [GRAVITY]: '⬇️' };
+const POWER_UP_EVERY = 3;     // a power-up is queued every N cleared lines
+const EFFECT_CELL_SCORE = 10; // × level, per block destroyed by Bomb / Ray column
+const WILDCARD_SCORE = 50;    // × level, per wildcard removed on a line clear
 
 const LINE_SCORES = [0, 100, 300, 500, 800];
 
@@ -53,7 +74,7 @@ const restartBtn = document.getElementById('restart-btn');
 const resumeBtn = document.getElementById('resume-btn');
 const themeToggleBtn = document.getElementById('theme-toggle');
 
-let board, current, next, score, lines, level, paused, gameOver, lastTime, dropAccum, dropInterval, animId, theme;
+let board, current, next, score, lines, level, paused, gameOver, lastTime, dropAccum, dropInterval, animId, theme, pendingPowerUps;
 
 function createBoard() {
   return Array.from({ length: ROWS }, () => new Array(COLS).fill(0));
@@ -67,6 +88,10 @@ function makePiece(type) {
 function randomPiece() {
   const r = Math.random() * (7 + HOLLOW_WEIGHT);
   return makePiece(r >= 7 ? HOLLOW : Math.floor(r) + 1);
+}
+
+function isPowerUp(type) {
+  return POWER_UPS.includes(type);
 }
 
 function scoreMultiplier(piece) {
@@ -125,8 +150,14 @@ function clearLines(mult) {
     }
   }
   if (cleared) {
+    // Any line clear also dissolves every wildcard left on the board
+    let wildcards = 0;
+    for (let r = 0; r < ROWS; r++)
+      for (let c = 0; c < COLS; c++)
+        if (board[r][c] === WILDCARD) { board[r][c] = 0; wildcards++; }
     lines += cleared;
     score += (LINE_SCORES[cleared] || 0) * level * mult;
+    score += wildcards * WILDCARD_SCORE * level;
     level = Math.floor(lines / 10) + 1;
     dropInterval = Math.max(100, 1000 - (level - 1) * 90);
     updateHUD();
@@ -158,19 +189,78 @@ function softDrop() {
 }
 
 function lockPiece() {
-  merge();
+  if (isPowerUp(current.type)) applyPowerUp(current.x, current.y, current.type);
+  else merge();
+  const linesBefore = lines;
   const cleared = clearLines(scoreMultiplier(current));
+  pendingPowerUps += Math.floor(lines / POWER_UP_EVERY) - Math.floor(linesBefore / POWER_UP_EVERY);
   spawn();
   if (cleared === 4 && !gameOver) {
-    // Tetris reward: the upcoming piece becomes a 1×1
+    // Tetris reward: the upcoming piece becomes a 1×1 (a displaced power-up goes back to the queue)
+    if (isPowerUp(next.type)) pendingPowerUps++;
     next = makePiece(SINGLE);
     drawNext();
   }
 }
 
+function applyPowerUp(x, y, type) {
+  let destroyed = 0;
+  switch (type) {
+    case BOMB:
+      for (let r = y - 1; r <= y + 1; r++)
+        for (let c = x - 1; c <= x + 1; c++)
+          if (r >= 0 && r < ROWS && c >= 0 && c < COLS && board[r][c]) {
+            board[r][c] = 0;
+            destroyed++;
+          }
+      break;
+    case RAY:
+      for (let r = 0; r < ROWS; r++)
+        if (r !== y && board[r][x]) { board[r][x] = 0; destroyed++; }
+      // Fill the landing row so clearLines() removes it as a regular line
+      board[y].fill(RAY);
+      break;
+    case TINT: {
+      let target = y + 1 < ROWS ? board[y + 1][x] : 0;
+      if (!target || target === WILDCARD) target = mostCommonColor();
+      if (target)
+        for (let r = 0; r < ROWS; r++)
+          for (let c = 0; c < COLS; c++)
+            if (board[r][c] === target) board[r][c] = WILDCARD;
+      break;
+    }
+    case GRAVITY:
+      for (let c = 0; c < COLS; c++) {
+        const filled = [];
+        for (let r = 0; r < ROWS; r++) if (board[r][c]) filled.push(board[r][c]);
+        for (let r = ROWS - 1; r >= 0; r--) board[r][c] = filled.pop() || 0;
+      }
+      break;
+  }
+  score += destroyed * EFFECT_CELL_SCORE * level;
+  updateHUD();
+}
+
+function mostCommonColor() {
+  const counts = {};
+  let best = 0;
+  for (const row of board)
+    for (const v of row)
+      if (v && v !== WILDCARD) {
+        counts[v] = (counts[v] || 0) + 1;
+        if (!best || counts[v] > counts[best]) best = v;
+      }
+  return best;
+}
+
 function spawn() {
   current = next;
-  next = randomPiece();
+  if (pendingPowerUps > 0) {
+    pendingPowerUps--;
+    next = makePiece(POWER_UPS[Math.floor(Math.random() * POWER_UPS.length)]);
+  } else {
+    next = randomPiece();
+  }
   dropAccum = 0;
   if (collide(current.shape, current.x, current.y)) {
     endGame();
@@ -188,11 +278,23 @@ function drawBlock(context, x, y, colorIndex, size, alpha) {
   if (!colorIndex) return;
   const color = COLORS[colorIndex];
   context.globalAlpha = alpha ?? 1;
-  context.fillStyle = color;
+  if (colorIndex === WILDCARD) {
+    const grad = context.createLinearGradient(x * size, y * size, (x + 1) * size, (y + 1) * size);
+    ['#e57373', '#ffd54f', '#81c784', '#4dd0e1', '#ba68c8'].forEach((c, i, a) => grad.addColorStop(i / (a.length - 1), c));
+    context.fillStyle = grad;
+  } else {
+    context.fillStyle = color;
+  }
   context.fillRect(x * size + 1, y * size + 1, size - 2, size - 2);
   // highlight
   context.fillStyle = 'rgba(255,255,255,0.12)';
   context.fillRect(x * size + 1, y * size + 1, size - 2, 4);
+  if (isPowerUp(colorIndex)) {
+    context.font = `${Math.floor(size * 0.7)}px sans-serif`;
+    context.textAlign = 'center';
+    context.textBaseline = 'middle';
+    context.fillText(POWER_ICONS[colorIndex], x * size + size / 2, y * size + size / 2 + 1);
+  }
   context.globalAlpha = 1;
 }
 
@@ -310,6 +412,7 @@ function init() {
   gameOver = false;
   dropInterval = 1000;
   dropAccum = 0;
+  pendingPowerUps = 0;
   lastTime = performance.now();
   next = randomPiece();
   spawn();
