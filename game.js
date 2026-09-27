@@ -15,10 +15,10 @@ const COLORS = [
   '#ffb74d', // L - orange
   '#ec407a', // Single - pink
   '#8d6e63', // Hollow - brown
-  '#424242', // Bomb - dark grey
-  '#fff176', // Ray - light yellow
-  '#f8bbd0', // Tint - light pink
-  '#90a4ae', // Gravity - blue grey
+  '#ff8a65', // Bomb - orange
+  '#4fc3f7', // Ray - light blue
+  '#f48fb1', // Tint - pink
+  '#b0bec5', // Gravity - light blue grey
   '#ffffff', // Wildcard (drawn as a rainbow gradient)
 ];
 
@@ -54,6 +54,9 @@ const POWER_ICONS = { [BOMB]: '💣', [RAY]: '⚡', [TINT]: '🎨', [GRAVITY]: '
 const POWER_UP_EVERY = 3;     // a power-up is queued every N cleared lines
 const EFFECT_CELL_SCORE = 10; // × level, per block destroyed by Bomb / Ray column
 const WILDCARD_SCORE = 50;    // × level, per wildcard removed on a line clear
+const POWER_NAMES = { [BOMB]: '¡Bum!', [RAY]: '¡Rayo!', [TINT]: '¡Comodín!', [GRAVITY]: '¡Gravedad!' };
+const EFFECT_FLASH_MS = 350;  // cell flash after a power-up lands
+const EFFECT_TEXT_MS = 800;   // floating score / name text
 
 const LINE_SCORES = [0, 100, 300, 500, 800];
 
@@ -74,7 +77,7 @@ const restartBtn = document.getElementById('restart-btn');
 const resumeBtn = document.getElementById('resume-btn');
 const themeToggleBtn = document.getElementById('theme-toggle');
 
-let board, current, next, score, lines, level, paused, gameOver, lastTime, dropAccum, dropInterval, animId, theme, pendingPowerUps;
+let board, current, next, score, lines, level, paused, gameOver, lastTime, dropAccum, dropInterval, animId, theme, pendingPowerUps, effects;
 
 function createBoard() {
   return Array.from({ length: ROWS }, () => new Array(COLS).fill(0));
@@ -205,18 +208,23 @@ function lockPiece() {
 
 function applyPowerUp(x, y, type) {
   let destroyed = 0;
+  const cells = [];
   switch (type) {
     case BOMB:
-      for (let r = y - 1; r <= y + 1; r++)
+      // 3×3 blast centred on the cell below the landing spot, so it always bites into the stack
+      for (let r = y; r <= y + 2; r++)
         for (let c = x - 1; c <= x + 1; c++)
-          if (r >= 0 && r < ROWS && c >= 0 && c < COLS && board[r][c]) {
-            board[r][c] = 0;
-            destroyed++;
+          if (r >= 0 && r < ROWS && c >= 0 && c < COLS) {
+            cells.push([c, r]);
+            if (board[r][c]) { board[r][c] = 0; destroyed++; }
           }
       break;
     case RAY:
-      for (let r = 0; r < ROWS; r++)
+      for (let r = 0; r < ROWS; r++) {
+        cells.push([x, r]);
         if (r !== y && board[r][x]) { board[r][x] = 0; destroyed++; }
+      }
+      for (let c = 0; c < COLS; c++) if (c !== x) cells.push([c, y]);
       // Fill the landing row so clearLines() removes it as a regular line
       board[y].fill(RAY);
       break;
@@ -226,18 +234,31 @@ function applyPowerUp(x, y, type) {
       if (target)
         for (let r = 0; r < ROWS; r++)
           for (let c = 0; c < COLS; c++)
-            if (board[r][c] === target) board[r][c] = WILDCARD;
+            if (board[r][c] === target) { board[r][c] = WILDCARD; cells.push([c, r]); }
       break;
     }
     case GRAVITY:
       for (let c = 0; c < COLS; c++) {
         const filled = [];
         for (let r = 0; r < ROWS; r++) if (board[r][c]) filled.push(board[r][c]);
-        for (let r = ROWS - 1; r >= 0; r--) board[r][c] = filled.pop() || 0;
+        for (let r = ROWS - 1; r >= 0; r--) {
+          board[r][c] = filled.pop() || 0;
+          if (board[r][c]) cells.push([c, r]);
+        }
       }
       break;
   }
-  score += destroyed * EFFECT_CELL_SCORE * level;
+  const gained = destroyed * EFFECT_CELL_SCORE * level;
+  score += gained;
+  effects.push({
+    cells,
+    color: COLORS[type],
+    flashAlpha: type === GRAVITY ? 0.4 : 0.8,
+    text: `${POWER_ICONS[type]} ${gained ? '+' + gained : POWER_NAMES[type]}`,
+    tx: x * BLOCK + BLOCK / 2,
+    ty: y * BLOCK + BLOCK / 2,
+    start: performance.now(),
+  });
   updateHUD();
 }
 
@@ -290,12 +311,52 @@ function drawBlock(context, x, y, colorIndex, size, alpha) {
   context.fillStyle = 'rgba(255,255,255,0.12)';
   context.fillRect(x * size + 1, y * size + 1, size - 2, 4);
   if (isPowerUp(colorIndex)) {
-    context.font = `${Math.floor(size * 0.7)}px sans-serif`;
+    const cx = x * size + size / 2, cy = y * size + size / 2;
+    // light disc behind the emoji keeps it readable on any background
+    context.fillStyle = 'rgba(255,255,255,0.85)';
+    context.beginPath();
+    context.arc(cx, cy, size * 0.38, 0, Math.PI * 2);
+    context.fill();
+    // pulsing gold border marks the piece as special
+    const base = alpha ?? 1;
+    context.globalAlpha = base * (0.6 + 0.4 * Math.sin(performance.now() / 150));
+    context.strokeStyle = '#ffd700';
+    context.lineWidth = 2;
+    context.strokeRect(x * size + 2, y * size + 2, size - 4, size - 4);
+    context.globalAlpha = base;
+    context.font = `${Math.floor(size * 0.6)}px sans-serif`;
     context.textAlign = 'center';
     context.textBaseline = 'middle';
-    context.fillText(POWER_ICONS[colorIndex], x * size + size / 2, y * size + size / 2 + 1);
+    context.fillText(POWER_ICONS[colorIndex], cx, cy + 1);
   }
   context.globalAlpha = 1;
+}
+
+function drawEffects() {
+  const now = performance.now();
+  effects = effects.filter(e => now - e.start < EFFECT_TEXT_MS);
+  for (const e of effects) {
+    const t = now - e.start;
+    if (t < EFFECT_FLASH_MS) {
+      ctx.globalAlpha = e.flashAlpha * (1 - t / EFFECT_FLASH_MS);
+      ctx.fillStyle = e.color;
+      for (const [c, r] of e.cells) ctx.fillRect(c * BLOCK, r * BLOCK, BLOCK, BLOCK);
+    }
+    const p = t / EFFECT_TEXT_MS;
+    ctx.globalAlpha = 1 - p;
+    ctx.font = 'bold 16px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    const half = ctx.measureText(e.text).width / 2 + 4;
+    const tx = Math.min(Math.max(e.tx, half), canvas.width - half);
+    const ty = Math.max(e.ty - p * 30, 12);
+    ctx.lineWidth = 3;
+    ctx.strokeStyle = 'rgba(0,0,0,0.85)';
+    ctx.strokeText(e.text, tx, ty);
+    ctx.fillStyle = '#ffffff';
+    ctx.fillText(e.text, tx, ty);
+  }
+  ctx.globalAlpha = 1;
 }
 
 function drawGrid() {
@@ -335,6 +396,8 @@ function draw() {
   for (let r = 0; r < current.shape.length; r++)
     for (let c = 0; c < current.shape[r].length; c++)
       drawBlock(ctx, current.x + c, current.y + r, current.shape[r][c], BLOCK);
+
+  drawEffects();
 }
 
 function drawNext() {
@@ -413,6 +476,7 @@ function init() {
   dropInterval = 1000;
   dropAccum = 0;
   pendingPowerUps = 0;
+  effects = [];
   lastTime = performance.now();
   next = randomPiece();
   spawn();
