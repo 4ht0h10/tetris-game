@@ -22,6 +22,7 @@ Implementación del clásico **Tetris** en JavaScript vanilla, usando HTML5 Canv
     - [2. `style.css`](#2-stylecss)
     - [3. `game.js`](#3-gamejs)
     - [Flujo del juego](#flujo-del-juego)
+  - [Power-ups añadidos](#power-ups-añadidos)
   - [Tecnologías](#tecnologías)
   - [Estructura del proyecto](#estructura-del-proyecto)
   - [Personalización](#personalización)
@@ -137,6 +138,37 @@ init()
 ```
 
 Cuando una pieza recién generada ya colisiona al aparecer (`spawn`), se dispara `endGame()` y se muestra el overlay de **Game Over**.
+
+---
+
+## Power-ups añadidos
+
+Cada **3 líneas** completadas, la siguiente pieza (visible en **NEXT**) es un **power-up** elegido al azar entre los cuatro disponibles. Es un bloque 1×1 con un icono: se mueve y cae como cualquier pieza, pero al aterrizar **no se queda en el tablero**, sino que activa su efecto en la celda donde cae.
+
+| Icono | Power-up     | Efecto                                                                                                                                                                                 |
+| ----- | ------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 💣    | **Bomba**    | Destruye todos los bloques de un área **3×3** centrada en el punto de impacto.                                                                                                        |
+| ⚡    | **Rayo**     | Limpia en **cruz**: vacía la **columna** entera y elimina la **fila** donde aterriza (la fila cuenta como línea y los bloques de encima bajan).                                         |
+| 🎨    | **Tinte**    | Toma el color del bloque sobre el que cae (o el color más abundante si cae sobre el suelo) y convierte **todos los bloques de ese color** en **comodines** arcoíris.                   |
+| ⬇️    | **Gravedad** | **Compacta** el tablero: en cada columna los bloques caen hasta rellenar los huecos. Las filas que queden completas se eliminan.                                                        |
+
+**Comodines**: cuentan como celdas llenas para completar filas y, en cuanto se limpia **cualquier** línea, **todos los comodines del tablero desaparecen** a la vez.
+
+**Puntuación**:
+
+- Cada bloque destruido por la Bomba o por la columna del Rayo: **10 × nivel**.
+- Cada comodín que desaparece: **50 × nivel**.
+- Las líneas que se completan tras un efecto (la fila del Rayo, las que deja la Gravedad…) puntúan como líneas normales y suman al contador `LINES`.
+- Si un Tetris coincide con un power-up, primero sale la pieza 1×1 de recompensa y el power-up queda en cola para la siguiente.
+
+Constantes ajustables en `game.js`:
+
+| Constante           | Significado                                      | Por defecto |
+| ------------------- | ------------------------------------------------ | ----------- |
+| `POWER_UP_EVERY`    | Líneas necesarias para generar un power-up       | `3`         |
+| `EFFECT_CELL_SCORE` | Puntos (× nivel) por bloque destruido            | `10`        |
+| `WILDCARD_SCORE`    | Puntos (× nivel) por comodín eliminado           | `50`        |
+| `POWER_ICONS`       | Icono dibujado sobre cada power-up               | 💣 ⚡ 🎨 ⬇️ |
 
 ---
 
