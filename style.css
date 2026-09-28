@@ -229,6 +229,7 @@ kbd {
   z-index: 1;
   display: flex;
   justify-content: center;
+  gap: 12px;
   margin-top: 20px;
 }
 
@@ -276,4 +277,60 @@ kbd {
 /* Modo claro activo: mostrar luna (acción = pasar a oscuro) */
 [data-theme="light"] #theme-toggle .theme-option-dark {
   display: flex;
+}
+
+/* ---- Selector de skin ---- */
+.skin-picker {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 40px;
+  padding: 0 8px 0 16px;
+  background: var(--panel-bg);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  cursor: pointer;
+  transition: border-color 0.15s;
+}
+
+.skin-picker:hover,
+.skin-picker:focus-within {
+  border-color: var(--accent);
+}
+
+.skin-label {
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  color: var(--muted);
+}
+
+#skin-select {
+  background: var(--kbd-bg);
+  color: var(--fg);
+  border: 1px solid var(--kbd-border);
+  border-radius: 12px;
+  padding: 4px 8px;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+/* ---- Fondos del tablero por skin ---- */
+[data-skin="neon"] #board,
+[data-skin="neon"] #next-canvas {
+  background: #000;
+  border-color: #1f3a5a;
+  box-shadow: 0 0 30px rgba(0, 240, 255, 0.25);
+}
+
+[data-skin="pastel"][data-theme="dark"] #board,
+[data-skin="pastel"][data-theme="dark"] #next-canvas {
+  background: #221f2a;
+}
+
+[data-skin="pastel"][data-theme="light"] #board,
+[data-skin="pastel"][data-theme="light"] #next-canvas {
+  background: #fbf7fd;
 }

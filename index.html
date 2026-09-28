@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Tetris</title>
-  <link rel="stylesheet" href="style.css?v=3" />
+  <link rel="stylesheet" href="style.css?v=4" />
 </head>
 <body data-theme="dark">
   <div class="wrapper">
@@ -56,6 +56,15 @@
     </div>
 
     <footer class="theme-footer">
+      <label class="skin-picker" for="skin-select">
+        <span class="skin-label">Skin</span>
+        <select id="skin-select">
+          <option value="retro">Retro</option>
+          <option value="neon">Neón</option>
+          <option value="pastel">Pastel</option>
+          <option value="pixel">Pixel art</option>
+        </select>
+      </label>
       <button id="theme-toggle" type="button" aria-label="Cambiar a modo claro" title="Cambiar tema" aria-pressed="false">
         <span class="theme-option theme-option-light" aria-hidden="true">
           <span class="icon">☀️</span>
@@ -69,6 +78,6 @@
     </footer>
   </div>
 
-  <script src="game.js?v=7"></script>
+  <script src="game.js?v=8"></script>
 </body>
 </html>

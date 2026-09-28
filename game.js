@@ -4,23 +4,64 @@ const COLS = 10;
 const ROWS = 20;
 const BLOCK = 30;
 
-const COLORS = [
-  null,
-  '#4dd0e1', // I - cyan
-  '#ffd54f', // O - yellow
-  '#ba68c8', // T - purple
-  '#81c784', // S - green
-  '#e57373', // Z - red
-  '#7986cb', // J - indigo
-  '#ffb74d', // L - orange
-  '#ec407a', // Single - pink
-  '#8d6e63', // Hollow - brown
-  '#ff8a65', // Bomb - orange
-  '#4fc3f7', // Ray - light blue
-  '#f48fb1', // Tint - pink
-  '#b0bec5', // Gravity - light blue grey
-  '#ffffff', // Wildcard (drawn as a rainbow gradient)
-];
+// Skins: each one supplies its own palette (indexed by piece type, like the board cells),
+// grid colour, rainbow stops for the wildcard and the function that paints a single cell.
+const SKINS = {
+  retro: {
+    colors: [
+      null,
+      '#4dd0e1', // I - cyan
+      '#ffd54f', // O - yellow
+      '#ba68c8', // T - purple
+      '#81c784', // S - green
+      '#e57373', // Z - red
+      '#7986cb', // J - indigo
+      '#ffb74d', // L - orange
+      '#ec407a', // Single - pink
+      '#8d6e63', // Hollow - brown
+      '#ff8a65', // Bomb - orange
+      '#4fc3f7', // Ray - light blue
+      '#f48fb1', // Tint - pink
+      '#b0bec5', // Gravity - light blue grey
+      '#ffffff', // Wildcard (drawn as a rainbow gradient)
+    ],
+    rainbow: ['#e57373', '#ffd54f', '#81c784', '#4dd0e1', '#ba68c8'],
+    grid: { dark: '#22222e', light: '#c8c8d8' },
+    drawCell: drawCellRetro,
+  },
+  neon: {
+    colors: [
+      null,
+      '#00f0ff', '#fff200', '#d600ff', '#39ff14', '#ff073a', '#4d6bff', '#ff9f00',
+      '#ff00c8', '#ff8c42', '#ff5e00', '#00c3ff', '#ff4fd8', '#c0d8ff', '#ffffff',
+    ],
+    rainbow: ['#ff073a', '#fff200', '#39ff14', '#00f0ff', '#d600ff'],
+    grid: '#0c1624', // neon always plays on a black board
+    drawCell: drawCellNeon,
+  },
+  pastel: {
+    colors: [
+      null,
+      '#a8e6ef', '#fdeea0', '#d7b8e8', '#bfe5c0', '#f6b5b5', '#b8c0ec', '#fbd3a4',
+      '#f7bcd4', '#d2bcae', '#ffc3a8', '#b3e0f7', '#f9cde0', '#d5dde1', '#ffffff',
+    ],
+    rainbow: ['#f6b5b5', '#fdeea0', '#bfe5c0', '#a8e6ef', '#d7b8e8'],
+    grid: { dark: '#2e2b38', light: '#ece4f2' },
+    drawCell: drawCellPastel,
+  },
+  pixel: {
+    colors: [
+      null,
+      '#3cbcfc', '#f8b800', '#9c4ce0', '#38b848', '#e83828', '#3858e0', '#f87818',
+      '#f85898', '#a0602c', '#e45c10', '#58d8f8', '#f878f8', '#a8a8a8', '#ffffff',
+    ],
+    rainbow: ['#e83828', '#f8b800', '#38b848', '#3cbcfc', '#9c4ce0'],
+    grid: { dark: '#1c1c28', light: '#d0d0dc' },
+    drawCell: drawCellPixel,
+  },
+};
+const DEFAULT_SKIN = 'retro';
+const SKIN_STORAGE_KEY = 'tetris-skin';
 
 const PIECES = [
   null,
@@ -60,7 +101,6 @@ const EFFECT_TEXT_MS = 800;   // floating score / name text
 
 const LINE_SCORES = [0, 100, 300, 500, 800];
 
-const GRID_COLOR = { dark: '#22222e', light: '#c8c8d8' };
 const THEME_STORAGE_KEY = 'tetris-theme';
 
 const canvas = document.getElementById('board');
@@ -76,8 +116,9 @@ const overlayScore = document.getElementById('overlay-score');
 const restartBtn = document.getElementById('restart-btn');
 const resumeBtn = document.getElementById('resume-btn');
 const themeToggleBtn = document.getElementById('theme-toggle');
+const skinSelect = document.getElementById('skin-select');
 
-let board, current, next, score, lines, level, paused, gameOver, lastTime, dropAccum, dropInterval, animId, theme, pendingPowerUps, effects;
+let board, current, next, score, lines, level, paused, gameOver, lastTime, dropAccum, dropInterval, animId, theme, skin, pendingPowerUps, effects;
 
 function createBoard() {
   return Array.from({ length: ROWS }, () => new Array(COLS).fill(0));
@@ -252,7 +293,7 @@ function applyPowerUp(x, y, type) {
   score += gained;
   effects.push({
     cells,
-    color: COLORS[type],
+    color: skin.colors[type],
     flashAlpha: type === GRAVITY ? 0.4 : 0.8,
     text: `${POWER_ICONS[type]} ${gained ? '+' + gained : POWER_NAMES[type]}`,
     tx: x * BLOCK + BLOCK / 2,
@@ -297,38 +338,110 @@ function updateHUD() {
 
 function drawBlock(context, x, y, colorIndex, size, alpha) {
   if (!colorIndex) return;
-  const color = COLORS[colorIndex];
-  context.globalAlpha = alpha ?? 1;
+  const px = x * size, py = y * size;
+  let fill = skin.colors[colorIndex];
   if (colorIndex === WILDCARD) {
-    const grad = context.createLinearGradient(x * size, y * size, (x + 1) * size, (y + 1) * size);
-    ['#e57373', '#ffd54f', '#81c784', '#4dd0e1', '#ba68c8'].forEach((c, i, a) => grad.addColorStop(i / (a.length - 1), c));
-    context.fillStyle = grad;
-  } else {
-    context.fillStyle = color;
+    fill = context.createLinearGradient(px, py, px + size, py + size);
+    skin.rainbow.forEach((c, i, a) => fill.addColorStop(i / (a.length - 1), c));
   }
-  context.fillRect(x * size + 1, y * size + 1, size - 2, size - 2);
+  context.save();
+  context.globalAlpha = alpha ?? 1;
+  skin.drawCell(context, px, py, size, fill, colorIndex);
+  context.restore();
+  if (isPowerUp(colorIndex)) drawPowerUpMark(context, px, py, size, colorIndex, alpha ?? 1);
+}
+
+function drawCellRetro(context, px, py, size, fill) {
+  context.fillStyle = fill;
+  context.fillRect(px + 1, py + 1, size - 2, size - 2);
   // highlight
   context.fillStyle = 'rgba(255,255,255,0.12)';
-  context.fillRect(x * size + 1, y * size + 1, size - 2, 4);
-  if (isPowerUp(colorIndex)) {
-    const cx = x * size + size / 2, cy = y * size + size / 2;
-    // light disc behind the emoji keeps it readable on any background
-    context.fillStyle = 'rgba(255,255,255,0.85)';
-    context.beginPath();
-    context.arc(cx, cy, size * 0.38, 0, Math.PI * 2);
-    context.fill();
-    // pulsing gold border marks the piece as special
-    const base = alpha ?? 1;
-    context.globalAlpha = base * (0.6 + 0.4 * Math.sin(performance.now() / 150));
-    context.strokeStyle = '#ffd700';
-    context.lineWidth = 2;
-    context.strokeRect(x * size + 2, y * size + 2, size - 4, size - 4);
-    context.globalAlpha = base;
-    context.font = `${Math.floor(size * 0.6)}px sans-serif`;
-    context.textAlign = 'center';
-    context.textBaseline = 'middle';
-    context.fillText(POWER_ICONS[colorIndex], cx, cy + 1);
-  }
+  context.fillRect(px + 1, py + 1, size - 2, 4);
+}
+
+function drawCellNeon(context, px, py, size, fill, colorIndex) {
+  const alpha = context.globalAlpha;
+  context.shadowColor = colorIndex === WILDCARD ? '#ffffff' : fill;
+  context.shadowBlur = size * 0.5;
+  // dim tinted core + bright glowing outline
+  context.fillStyle = fill;
+  context.globalAlpha = alpha * 0.35;
+  context.fillRect(px + 3, py + 3, size - 6, size - 6);
+  context.globalAlpha = alpha;
+  context.strokeStyle = fill;
+  context.lineWidth = 2;
+  context.strokeRect(px + 3, py + 3, size - 6, size - 6);
+  context.shadowBlur = 0;
+  context.fillStyle = 'rgba(255,255,255,0.55)';
+  context.fillRect(px + 6, py + 6, size * 0.25, 2);
+}
+
+// Canvas 2D roundRect() is not available everywhere, so build the path with arcTo
+function roundRectPath(context, x, y, w, h, r) {
+  context.beginPath();
+  context.moveTo(x + r, y);
+  context.arcTo(x + w, y, x + w, y + h, r);
+  context.arcTo(x + w, y + h, x, y + h, r);
+  context.arcTo(x, y + h, x, y, r);
+  context.arcTo(x, y, x + w, y, r);
+  context.closePath();
+}
+
+function drawCellPastel(context, px, py, size, fill) {
+  const r = size * 0.25;
+  roundRectPath(context, px + 1.5, py + 1.5, size - 3, size - 3, r);
+  context.fillStyle = fill;
+  context.fill();
+  context.strokeStyle = 'rgba(90,70,110,0.18)';
+  context.lineWidth = 1;
+  context.stroke();
+  // soft glossy highlight in the upper half
+  roundRectPath(context, px + 5, py + 4, size - 10, size * 0.3, r * 0.6);
+  context.fillStyle = 'rgba(255,255,255,0.45)';
+  context.fill();
+}
+
+function drawCellPixel(context, px, py, size, fill) {
+  const u = size / 10; // 10×10 "pixels" per block
+  context.fillStyle = fill;
+  context.fillRect(px, py, size, size);
+  // bevel: light top/left, dark bottom/right, dark outline
+  context.fillStyle = 'rgba(255,255,255,0.45)';
+  context.fillRect(px + u, py + u, size - 2 * u, u);
+  context.fillRect(px + u, py + u, u, size - 2 * u);
+  context.fillStyle = 'rgba(0,0,0,0.35)';
+  context.fillRect(px + u, py + size - 2 * u, size - 2 * u, u);
+  context.fillRect(px + size - 2 * u, py + u, u, size - 2 * u);
+  context.strokeStyle = 'rgba(0,0,0,0.6)';
+  context.lineWidth = u * 0.6;
+  context.strokeRect(px + u * 0.3, py + u * 0.3, size - u * 0.6, size - u * 0.6);
+  // dithered texture on the inner face
+  context.fillStyle = 'rgba(0,0,0,0.18)';
+  for (let i = 2; i < 8; i++)
+    for (let j = 2; j < 8; j++)
+      if ((i + 2 * j) % 5 === 0) context.fillRect(px + i * u, py + j * u, u, u);
+  context.fillStyle = 'rgba(255,255,255,0.7)';
+  context.fillRect(px + 2 * u, py + 2 * u, u, u);
+}
+
+function drawPowerUpMark(context, px, py, size, type, alpha) {
+  const cx = px + size / 2, cy = py + size / 2;
+  context.globalAlpha = alpha;
+  // light disc behind the emoji keeps it readable on any background
+  context.fillStyle = 'rgba(255,255,255,0.85)';
+  context.beginPath();
+  context.arc(cx, cy, size * 0.38, 0, Math.PI * 2);
+  context.fill();
+  // pulsing gold border marks the piece as special
+  context.globalAlpha = alpha * (0.6 + 0.4 * Math.sin(performance.now() / 150));
+  context.strokeStyle = '#ffd700';
+  context.lineWidth = 2;
+  context.strokeRect(px + 2, py + 2, size - 4, size - 4);
+  context.globalAlpha = alpha;
+  context.font = `${Math.floor(size * 0.6)}px sans-serif`;
+  context.textAlign = 'center';
+  context.textBaseline = 'middle';
+  context.fillText(POWER_ICONS[type], cx, cy + 1);
   context.globalAlpha = 1;
 }
 
@@ -360,7 +473,7 @@ function drawEffects() {
 }
 
 function drawGrid() {
-  ctx.strokeStyle = GRID_COLOR[theme] || GRID_COLOR.dark;
+  ctx.strokeStyle = typeof skin.grid === 'string' ? skin.grid : skin.grid[theme] || skin.grid.dark;
   ctx.lineWidth = 0.5;
   for (let c = 1; c < COLS; c++) {
     ctx.beginPath();
@@ -430,6 +543,16 @@ function applyTheme(newTheme) {
   if (next) drawNext();
 }
 
+function applySkin(name) {
+  if (!SKINS[name]) name = DEFAULT_SKIN;
+  skin = SKINS[name];
+  document.body.dataset.skin = name;
+  localStorage.setItem(SKIN_STORAGE_KEY, name);
+  skinSelect.value = name;
+  if (current) draw();
+  if (next) drawNext();
+}
+
 function toggleTheme() {
   applyTheme(theme === 'dark' ? 'light' : 'dark');
 }
@@ -487,6 +610,7 @@ function init() {
 }
 
 document.addEventListener('keydown', e => {
+  if (e.target === skinSelect) return; // arrows/space belong to the focused selector
   if (e.code === 'KeyP') { togglePause(); return; }
   if (paused || gameOver) return;
   switch (e.code) {
@@ -514,8 +638,13 @@ document.addEventListener('keydown', e => {
 restartBtn.addEventListener('click', init);
 resumeBtn.addEventListener('click', togglePause);
 themeToggleBtn.addEventListener('click', toggleTheme);
+skinSelect.addEventListener('change', () => {
+  applySkin(skinSelect.value);
+  skinSelect.blur(); // give the keyboard back to the game
+});
 
 const savedTheme = localStorage.getItem(THEME_STORAGE_KEY);
+applySkin(localStorage.getItem(SKIN_STORAGE_KEY));
 applyTheme(savedTheme === 'light' ? 'light' : 'dark');
 
 init();
