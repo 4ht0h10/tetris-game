@@ -1,7 +1,7 @@
 ---
 description: Crea un git worktree en .trees/<nombre> y resuelve allí el requerimiento indicado
 argument-hint: <descripción del problema o requerimiento>
-allowed-tools: Bash(git worktree:*), Bash(git branch:*), Bash(git status:*), Bash(git log:*), Bash(git diff:*), Bash(git add:*), Bash(git commit:*), Bash(git -C:*), Bash(ls:*), Bash(mkdir:*), Read, Edit, Write, Glob, Grep
+allowed-tools: Bash(git worktree:*), Bash(git branch:*), Bash(git status:*), Bash(git log:*), Bash(git diff:*), Bash(git -C:*), Bash(ls:*), Bash(mkdir:*), Read, Edit, Write, Glob, Grep
 ---
 
 ## Requerimiento
@@ -39,19 +39,14 @@ Vas a resolver el requerimiento de arriba **de forma independiente y aislada del
    - Sigue las convenciones de `CLAUDE.md` (p. ej. subir el `?v=N` de `index.html` si cambias `game.js` o `style.css`; textos de UI en español).
    - Implementa la solución completa del requerimiento.
 
-6. **Confirmar los cambios** en la rama del worktree con un commit descriptivo en español:
-
-   ```bash
-   git -C .trees/<nombre> add -A
-   git -C .trees/<nombre> commit -m "<mensaje>"
-   ```
-
-   No hagas push ni merge a la rama principal, ni borres el worktree.
+6. **No hagas commit**: deja los cambios sin confirmar en el worktree (ni `git add` ni `git commit`). El usuario revisa y retoca el código antes de hacer él mismo un único commit. Tampoco hagas push ni merge a la rama principal, ni borres el worktree.
 
 7. **Informar al usuario** (en español) de:
    - Nombre del worktree y rama creados, y la ruta `.trees/<nombre>`.
-   - Resumen de los cambios realizados y archivos tocados.
+   - Resumen de los cambios realizados y archivos tocados (muestra `git -C .trees/<nombre> status --short`).
+   - **Advertencia destacada** de que los cambios **todavía no están commiteados** en la rama `<nombre>`.
    - Cómo probarlo (p. ej. `python -m http.server 8000` desde `.trees/<nombre>`).
    - Cómo integrarlo o descartarlo:
-     - Integrar: `git merge <nombre>` desde la rama principal.
-     - Descartar: `git worktree remove .trees/<nombre>` y `git branch -D <nombre>`.
+     - Commitear tras revisar: `git -C .trees/<nombre> add -A` y `git -C .trees/<nombre> commit -m "<mensaje>"` (sugiere un mensaje descriptivo en español).
+     - Integrar (después del commit): `git merge <nombre>` desde la rama principal.
+     - Descartar: `git worktree remove --force .trees/<nombre>` (hace falta `--force` porque hay cambios sin commitear) y `git branch -D <nombre>`.
