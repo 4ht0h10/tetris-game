@@ -1,5 +1,5 @@
 ---
-description: Crea un git worktree aislado en .trees/<nombre> y resuelve allí el requerimiento indicado
+description: Crea un git worktree en .trees/<nombre> y resuelve allí el requerimiento indicado
 argument-hint: <descripción del problema o requerimiento>
 allowed-tools: Bash(git worktree:*), Bash(git branch:*), Bash(git status:*), Bash(git log:*), Bash(git diff:*), Bash(git add:*), Bash(git commit:*), Bash(git -C:*), Bash(ls:*), Bash(mkdir:*), Read, Edit, Write, Glob, Grep
 ---
