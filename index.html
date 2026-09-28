@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Tetris</title>
-  <link rel="stylesheet" href="style.css?v=3" />
+  <link rel="stylesheet" href="style.css?v=4" />
 </head>
 <body data-theme="dark">
   <div class="wrapper">
@@ -48,6 +48,30 @@
       <div class="overlay-box">
         <p id="overlay-title">GAME OVER</p>
         <p id="overlay-score"></p>
+
+        <form id="record-form" class="record-form" hidden>
+          <label for="record-name" id="record-rank">¡Nuevo récord!</label>
+          <div class="record-form-row">
+            <input id="record-name" type="text" maxlength="12" placeholder="Tu nombre" autocomplete="off" spellcheck="false" />
+            <button id="record-save-btn" type="submit">Guardar</button>
+          </div>
+        </form>
+
+        <section id="records" class="records" hidden>
+          <span class="label">MEJORES PUNTUACIONES</span>
+          <table class="records-table">
+            <thead>
+              <tr><th>#</th><th>Nombre</th><th>Puntos</th><th>Líneas</th><th>Combo</th></tr>
+            </thead>
+            <tbody id="records-body"></tbody>
+          </table>
+          <div class="records-stats">
+            <span>Mejor combo: <strong id="best-combo">0</strong></span>
+            <span>Líneas máx.: <strong id="max-lines">0</strong></span>
+          </div>
+          <button id="reset-records-btn" class="link-btn" type="button">Borrar récords</button>
+        </section>
+
         <div class="overlay-actions">
           <button id="resume-btn" type="button">Continuar</button>
           <button id="restart-btn" type="button">Reiniciar</button>
@@ -69,6 +93,6 @@
     </footer>
   </div>
 
-  <script src="game.js?v=7"></script>
+  <script src="game.js?v=8"></script>
 </body>
 </html>
